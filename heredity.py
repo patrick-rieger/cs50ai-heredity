@@ -152,43 +152,61 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         return 0
 
     def returnTrait(person, passTrait):
+        '''
+        Returns the probability that given person (in that case, a parent) 
+        passes a trait forward.
+        If the passTrait is True, the returned probability means that the person will 
+        pass the gene and if it is False, means that don't
+        '''
         genes = howManyGenes(person)
         ret = 0
         if passTrait:
             if genes == 0:
+                # With 0 genes, the only way to pass the trait is with mutation
                 ret = PROBS["mutation"]
             elif genes == 1:
+                # If a parent has one copy of the gene, then the gene is passed 
+                # on to the child with probability 0.5. 
                 ret = 0.5 
             else: # genes == 2
+                # If a parent has two copies of the gene, 
+                # then they will pass the gene on to the child 
+                # The only way it doesn't occurs is with the chance it mutates
                 ret = 1 - PROBS["mutation"]
         else:
             if genes == 0:
+                # If a parent has no copies of the gene, 
+                # then they will not pass the gene on to the child
+                # The only way it doesn't occurs is with the chance it mutates
                 ret = 1 - PROBS["mutation"]
             elif genes == 1:
                 ret = 0.5 
             else: # genes == 2
+                # With 2 genes, the only way to not pass the trait is with mutation
                 ret = PROBS["mutation"]
         return ret
     
-    test = {person: 0 for person in people}
+    test = {person: 1 for person in people}
     for person in people:
         genes = howManyGenes(person)
         if haveParents(person):
             mother, father = people[person]["mother"], people[person]["father"]
             if genes == 0:
                 # Not get from mother and father
-                test[person] = returnTrait(father, False) * returnTrait(mother, False)
+                test[person] *= returnTrait(father, False) * returnTrait(mother, False)
             elif genes == 1:
                 # Gets the gene from mother and not father
-                test[person] = returnTrait(father, False) * returnTrait(mother, True)
+                test[person] *= returnTrait(father, False) * returnTrait(mother, True)
                 # Or gets the gene from his father and not his mother
                 test[person] += returnTrait(father, True) * returnTrait(mother, False)
             else: # genes == 2
                 # Gets from mother and father
-                test[person] = returnTrait(father, True) * returnTrait(mother, True)
+                test[person] *= returnTrait(father, True) * returnTrait(mother, True)
         else:
-            test[person] = PROBS["gene"][genes]
+            test[person] *= PROBS["gene"][genes]
+        
         test[person] *= PROBS["trait"][genes][person in have_trait]
+    
     probability = 1
     for value in test.values():
         probability *= value
@@ -228,6 +246,7 @@ def normalize(probabilities):
             probabilities[person]["gene"][i] = probabilities[person]["gene"][i] / total
         
         total = probabilities[person]["trait"][False] + probabilities[person]["trait"][True]
+
         probabilities[person]["trait"][False] = probabilities[person]["trait"][False] / total
         probabilities[person]["trait"][True] = probabilities[person]["trait"][True] / total
 
